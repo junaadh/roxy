@@ -98,6 +98,60 @@ macro_rules! as_str {
             )*
         }
     };
+
+    (s $self:expr, [$($ty:ident$(($data:tt))? $(=> $printer:expr)?),* $(,)?]) => {
+        match $self {
+            $(
+                Self::$ty$(($data))? => format!("{}", $($printer)? $($data)?),
+            )*
+        }
+    };
+}
+
+impl TokenType {
+    pub fn as_str(&self) -> String {
+        as_str!(s self, [
+                OpenParen => "(",
+                CloseParen => ")",
+                OpenBrace => "{",
+                CloseBrace => "}",
+                Comma => ",",
+                Dot => ".",
+                Minus => "-",
+                Plus => "+",
+                SemiColon => ";",
+                Slash => "/",
+                Star => "*",
+                Bang => "!",
+                BangEqual => "!=",
+                Equal => "=",
+                EqualEqual => "==",
+                Greater => ">",
+                GreaterEqual => ">=",
+                Less => "<",
+                LessEqual => "<=",
+                Ident(data),
+                String(data),
+                Number(data),
+                And => "and",
+                Class => "class",
+                Else => "else",
+                False => "false",
+                Fn => "fn",
+                For => "for",
+                If => "if",
+                Nil => "nil",
+                Or => "or",
+                Return => "return",
+                Super => "super",
+                This => "this",
+                True => "true",
+                Var => "var",
+                While => "while",
+                Error => "Error",
+                Eof => "<<EOF>>",
+        ])
+    }
 }
 
 impl fmt::Display for TokenType {
