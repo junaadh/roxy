@@ -1,4 +1,7 @@
-use std::{fmt, io};
+use std::{
+    fmt, io,
+    num::{ParseFloatError, ParseIntError},
+};
 
 use crate::ast::Token;
 
@@ -6,6 +9,9 @@ use crate::ast::Token;
 pub enum RxError {
     Io(io::Error),
     Lex(Error),
+    Parse(Error),
+    NumConversion(ParseIntError),
+    FloatConversion(ParseFloatError),
 }
 
 impl From<io::Error> for RxError {
@@ -14,11 +20,26 @@ impl From<io::Error> for RxError {
     }
 }
 
+impl From<ParseFloatError> for RxError {
+    fn from(value: ParseFloatError) -> Self {
+        Self::FloatConversion(value)
+    }
+}
+
+impl From<ParseIntError> for RxError {
+    fn from(value: ParseIntError) -> Self {
+        Self::NumConversion(value)
+    }
+}
+
 impl fmt::Display for RxError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Io(e) => write!(f, "{}", e),
-            Self::Lex(e) => write!(f, "{}", e),
+            Self::Lex(e) => write!(f, "Lexical: {}", e),
+            Self::Parse(e) => write!(f, "Parse: {}", e),
+            Self::NumConversion(e) => write!(f, "{}", e),
+            Self::FloatConversion(e) => write!(f, "{}", e),
         }
     }
 }

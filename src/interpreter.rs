@@ -3,7 +3,7 @@ use std::{
     io::{self, BufRead, Read, Write},
 };
 
-use crate::{ast::TokenType, lexer::Cursor, Res};
+use crate::{ast::AstPrinter, lexer::Cursor, parser::Parser, Res};
 
 pub struct Interpreter;
 
@@ -48,13 +48,12 @@ impl Interpreter {
     }
 
     fn execute(&self, contents: &str) -> Res<()> {
-        let tokens = Cursor::new(contents).tokenize();
-        for token in tokens {
-            if token.kind == TokenType::Error {
-                continue;
-            }
+        let lexer = Cursor::new(contents).tokenize().collect::<Vec<_>>();
+        let parser = Parser::new(lexer).parse();
 
-            println!("{token}");
+        if let Some(expr) = parser {
+            let ast = AstPrinter;
+            println!("{}", ast.print(&expr));
         }
 
         Ok(())

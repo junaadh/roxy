@@ -34,6 +34,14 @@ macro_rules! define_ast {
                     pub $field: $value,
                 )*
             }
+
+            impl $name {
+                pub fn new($( $field: $value, )*) -> Box<Self> {
+                    Box::new(Self{
+                        $( $field, )*
+                    })
+                }
+            }
         )*
     };
 }

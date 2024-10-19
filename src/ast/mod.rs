@@ -4,4 +4,4 @@ mod span;
 mod token;
 mod traits;
 
-pub use self::{expr::*, printer::*, span::*, token::*, traits::*};
+pub use self::{expr::*, printer::*, span::*, token::*};

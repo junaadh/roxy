@@ -6,7 +6,7 @@ use crate::{
     token,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Cursor<'a> {
     source: &'a str,
     chars: Chars<'a>,

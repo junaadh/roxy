@@ -1,6 +1,6 @@
 use std::{fmt, ops::Index};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct Span(pub usize, pub usize, pub usize);
 
 impl Span {
