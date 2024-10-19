@@ -3,4 +3,11 @@ name = "roxy"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+trace = []
+
+[package.metadata.clippy]
+# Disable Clippy linting for cfg-inactive code
+cfg_inactive_code = false
+
 [dependencies]
