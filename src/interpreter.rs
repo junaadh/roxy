@@ -3,7 +3,13 @@ use std::{
     io::{self, BufRead, Read, Write},
 };
 
-use crate::{ast::AstPrinter, lexer::Cursor, parser::Parser, Res};
+use crate::{
+    ast::{AstPrinter, Expr, ExprVisitor, TokenType},
+    lexer::Cursor,
+    parser::Parser,
+    types::Object,
+    Res,
+};
 
 pub struct Interpreter;
 
@@ -52,10 +58,61 @@ impl Interpreter {
         let parser = Parser::new(lexer).parse();
 
         if let Some(expr) = parser {
-            let ast = AstPrinter;
-            println!("{}", ast.print(&expr));
+            self.interpret(&expr);
         }
 
         Ok(())
+    }
+
+    fn evaluate(&self, expr: &Expr) -> Res<Object> {
+        expr.accept(self)
+    }
+
+    pub fn interpret(&self, expr: &Expr) {
+        match self.evaluate(expr) {
+            Ok(value) => println!("{}", value),
+            Err(err) => eprintln!("{}", err),
+        }
+    }
+
+    // visitor
+}
+
+impl ExprVisitor<Res<Object>> for Interpreter {
+    fn visit_binary(&self, expr: &crate::ast::Binary) -> Res<Object> {
+        let left = self.evaluate(&expr.left)?;
+        let right = self.evaluate(&expr.right)?;
+
+        match expr.operator.kind {
+            TokenType::BangEqual => Ok(Object::Bool(left != right)),
+            TokenType::EqualEqual => Ok(Object::Bool(left == right)),
+            TokenType::Greater => Ok(Object::Bool(left > right)),
+            TokenType::GreaterEqual => Ok(Object::Bool(left >= right)),
+            TokenType::Less => Ok(Object::Bool(left < right)),
+            TokenType::LessEqual => Ok(Object::Bool(left <= right)),
+            TokenType::Minus => left - right,
+            TokenType::Slash => left / right,
+            TokenType::Star => left * right,
+            TokenType::Plus => left + right,
+            _ => unreachable!("Shouldnt be here"),
+        }
+    }
+
+    fn visit_grouping(&self, expr: &crate::ast::Grouping) -> Res<Object> {
+        self.evaluate(&expr.expression)
+    }
+
+    fn visit_literal(&self, expr: &crate::ast::Literal) -> Res<Object> {
+        Ok(expr.value.clone())
+    }
+
+    fn visit_unary(&self, expr: &crate::ast::Unary) -> Res<Object> {
+        let right = self.evaluate(&expr.right)?;
+
+        match expr.operator.kind {
+            TokenType::Minus => -right,
+            TokenType::Bang => !right,
+            _ => unreachable!("Shouldnt be here?"),
+        }
     }
 }

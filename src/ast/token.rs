@@ -21,7 +21,7 @@ impl Token {
             TokenType::False => Ok(Object::Bool(false)),
             TokenType::Nil => Ok(Object::Nil),
             TokenType::String(s) => Ok(Object::String(s.into_string())),
-            TokenType::Number(num) => match num.parse::<usize>() {
+            TokenType::Number(num) => match num.parse::<isize>() {
                 Ok(v) => Ok(Object::Int(v)),
                 Err(_) => match num.parse::<f64>() {
                     Ok(f) => Ok(Object::Float(f)),

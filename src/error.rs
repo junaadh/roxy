@@ -12,6 +12,7 @@ pub enum RxError {
     Parse(Error),
     NumConversion(ParseIntError),
     FloatConversion(ParseFloatError),
+    Ty(TypeError),
 }
 
 impl From<io::Error> for RxError {
@@ -32,6 +33,12 @@ impl From<ParseIntError> for RxError {
     }
 }
 
+impl From<TypeError> for RxError {
+    fn from(value: TypeError) -> Self {
+        Self::Ty(value)
+    }
+}
+
 impl fmt::Display for RxError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -40,6 +47,7 @@ impl fmt::Display for RxError {
             Self::Parse(e) => write!(f, "Parse: {}", e),
             Self::NumConversion(e) => write!(f, "{}", e),
             Self::FloatConversion(e) => write!(f, "{}", e),
+            Self::Ty(s) => write!(f, "Type: {}", s),
         }
     }
 }
@@ -71,5 +79,24 @@ impl fmt::Display for Error {
                 self.token.span.2, self.token.kind, self.msg
             ),
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct TypeError {
+    msg: String,
+}
+
+impl TypeError {
+    pub fn new(msg: &str) -> TypeError {
+        Self {
+            msg: msg.to_owned(),
+        }
+    }
+}
+
+impl fmt::Display for TypeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.msg)
     }
 }
