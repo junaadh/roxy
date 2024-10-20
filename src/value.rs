@@ -1,10 +1,121 @@
-use std::fmt;
+use std::{
+    fmt,
+    ops::{Add, Div, Mul, Neg, Not, Sub},
+};
+
+use crate::error::{Compile, RxError};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Value {
     Float(f64),
     Int(i64),
     Bool(bool),
+}
+
+impl Value {
+    fn get_ty(&self) -> &str {
+        match self {
+            Self::Float(_) => "float64",
+            Self::Int(_) => "int64",
+            Self::Bool(_) => "bool",
+        }
+    }
+}
+
+impl Add for Value {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Self::Float(l), Self::Float(r)) => Self::Float(l + r),
+            (Self::Int(l), Self::Int(r)) => Self::Int(l + r),
+            (Self::Float(l), Self::Int(r)) => Self::Float(l + r as f64),
+            (Self::Int(l), Self::Float(r)) => Self::Float(l as f64 + r),
+            _ => panic!(
+                "TypeError: Unable to add lhs: {} with rhs: {}",
+                self.get_ty(),
+                rhs.get_ty()
+            ),
+        }
+    }
+}
+
+impl Sub for Value {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Self::Float(l), Self::Float(r)) => Self::Float(l - r),
+            (Self::Int(l), Self::Int(r)) => Self::Int(l - r),
+            (Self::Float(l), Self::Int(r)) => Self::Float(l - r as f64),
+            (Self::Int(l), Self::Float(r)) => Self::Float(l as f64 - r),
+            _ => panic!(
+                "TypeError: Unable to subtract lhs: {} with rhs: {}",
+                self.get_ty(),
+                rhs.get_ty()
+            ),
+        }
+    }
+}
+
+impl Mul for Value {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Self::Float(l), Self::Float(r)) => Self::Float(l * r),
+            (Self::Int(l), Self::Int(r)) => Self::Int(l * r),
+            (Self::Float(l), Self::Int(r)) => Self::Float(l * r as f64),
+            (Self::Int(l), Self::Float(r)) => Self::Float(l as f64 * r),
+            _ => panic!(
+                "TypeError: Unable to multiply lhs: {} with rhs: {}",
+                self.get_ty(),
+                rhs.get_ty()
+            ),
+        }
+    }
+}
+
+impl Div for Value {
+    type Output = Self;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Self::Float(l), Self::Float(r)) => Self::Float(l / r),
+            (Self::Int(l), Self::Int(r)) => Self::Int(l / r),
+            (Self::Float(l), Self::Int(r)) => Self::Float(l / r as f64),
+            (Self::Int(l), Self::Float(r)) => Self::Float(l as f64 / r),
+            _ => panic!(
+                "TypeError: Unable to divide lhs: {} with rhs: {}",
+                self.get_ty(),
+                rhs.get_ty()
+            ),
+        }
+    }
+}
+
+impl Neg for Value {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        match self {
+            Self::Float(f) => Self::Float(-f),
+            Self::Int(i) => Self::Int(-i),
+            _ => panic!("TypeError: Unable to negate {}", self.get_ty()),
+        }
+    }
+}
+
+impl Not for Value {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        match self {
+            Self::Int(i) => Self::Int(-i),
+            Self::Bool(b) => Self::Bool(!b),
+            _ => panic!("TypeError: Unable to use logical not on {}", self.get_ty()),
+        }
+    }
 }
 
 impl fmt::Display for Value {
@@ -23,14 +134,56 @@ impl From<f64> for Value {
     }
 }
 
+impl TryFrom<Value> for f64 {
+    type Error = RxError;
+
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        match value {
+            Value::Float(f) => Ok(f),
+            _ => Err(RxError::new(Compile::new(&format!(
+                "TypeError: Unable to convert {} to an f64",
+                value.get_ty()
+            )))),
+        }
+    }
+}
+
 impl From<i64> for Value {
     fn from(value: i64) -> Self {
         Value::Int(value)
     }
 }
 
+impl TryFrom<Value> for i64 {
+    type Error = RxError;
+
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        match value {
+            Value::Int(i) => Ok(i),
+            _ => Err(RxError::new(Compile::new(&format!(
+                "TypeError: Unable to convert {} to an i64",
+                value.get_ty()
+            )))),
+        }
+    }
+}
+
 impl From<bool> for Value {
     fn from(value: bool) -> Self {
         Value::Bool(value)
+    }
+}
+
+impl TryFrom<Value> for bool {
+    type Error = RxError;
+
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
+        match value {
+            Value::Bool(b) => Ok(b),
+            _ => Err(RxError::new(Compile::new(&format!(
+                "TypeError: Unable to convert {} to a bool",
+                value.get_ty()
+            )))),
+        }
     }
 }
