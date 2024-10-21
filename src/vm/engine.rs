@@ -1,11 +1,18 @@
 use crate::{
     chunks::{Chunk, Opcode},
+    compiler::{Cursor, Parser},
+    error::{Runtime, RxError},
     value::Value,
     Res,
 };
+use std::{
+    borrow::BorrowMut,
+    fs,
+    io::{self, BufRead, Read, Write},
+};
 
 pub struct Vm<'src> {
-    chunk: &'src Chunk,
+    chunk: &'src mut Chunk,
     stack: Vec<Value>,
     ip: usize,
 }
@@ -13,12 +20,53 @@ pub struct Vm<'src> {
 impl<'src> Vm<'src> {
     const STACK_SIZE: usize = u8::MAX as usize + 1;
 
-    pub fn new(chunk: &'src Chunk) -> Self {
+    pub fn new(chunk: &'src mut Chunk) -> Self {
         Vm {
             chunk,
             stack: Vec::with_capacity(Self::STACK_SIZE),
             ip: 0,
         }
+    }
+
+    // runners
+    pub fn run_file(&mut self, file_name: &str) -> Res<()> {
+        let mut file = fs::File::open(file_name)?;
+        let mut buf = String::new();
+
+        file.read_to_string(&mut buf)?;
+        self.interpret(&buf)?;
+        Ok(())
+    }
+
+    pub fn run_repl(&mut self) -> Res<()> {
+        let mut input = String::new();
+        loop {
+            input.clear();
+            print!("roxy:> ");
+            let _ = io::stdout().lock().flush();
+            if let Err(err) = io::stdin().lock().read_line(&mut input) {
+                eprintln!("RoxyUnwind: {err}");
+                continue;
+            }
+
+            let check = input.trim();
+            if check == "q" {
+                break;
+            } else if check.is_empty() {
+                continue;
+            }
+
+            self.interpret(check)?;
+            // match self.execute(check) {
+            //     Ok(_) => continue,
+            //     Err(e) => {
+            //         eprintln!("RoxyUnwind: {e}");
+            //         continue;
+            //     }
+            // }
+        }
+        println!("Exiting...");
+        Ok(())
     }
 
     // misc
@@ -30,7 +78,10 @@ impl<'src> Vm<'src> {
         self.stack.pop().expect("Empty stack")
     }
 
-    pub fn interpret(&mut self) -> Res<()> {
+    pub fn interpret(&mut self, buf: &str) -> Res<()> {
+        let parser = Parser::new(buf, self.chunk.borrow_mut());
+        parser.compile();
+
         self.run()?;
         Ok(())
     }
