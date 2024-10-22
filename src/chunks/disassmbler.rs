@@ -31,11 +31,11 @@ impl<'src> Disassembler<'src> {
             print!("S: ");
             if !stack.is_empty() {
                 for value in stack {
-                    print!("[ {} ]", value);
+                    print!("[{}]", value);
                 }
                 println!();
             } else {
-                println!("[ ]");
+                println!("[]");
             }
         }
     }
@@ -52,11 +52,18 @@ impl<'src> Disassembler<'src> {
 
         match opcode {
             Opcode::Constant(c) => self.const_op("OP_Constant", *c),
+            Opcode::Nil => self.simple_op("OP_Nil"),
+            Opcode::True => self.simple_op("OP_True"),
+            Opcode::False => self.simple_op("OP_False"),
+            Opcode::Equal => self.simple_op("OP_Equal"),
+            Opcode::Greater => self.simple_op("OP_Greater"),
+            Opcode::Less => self.simple_op("OP_Less"),
             Opcode::Add => self.simple_op("OP_Add"),
             Opcode::Subtract => self.simple_op("OP_Subtract"),
             Opcode::Multiply => self.simple_op("OP_Multiply"),
             Opcode::Divide => self.simple_op("OP_Divide"),
             Opcode::Negate => self.simple_op("OP_Negate"),
+            Opcode::Not => self.simple_op("OP_Not"),
             Opcode::Return => self.simple_op("OP_Return"),
         }
     }

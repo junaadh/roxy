@@ -1,7 +1,6 @@
 use crate::{
     chunks::{Chunk, Opcode},
-    compiler::{Cursor, Parser},
-    error::{Runtime, RxError},
+    compiler::Parser,
     value::Value,
     Res,
 };
@@ -78,11 +77,26 @@ impl<'src> Vm<'src> {
         self.stack.pop().expect("Empty stack")
     }
 
+    // fn peek(&self, distance: usize) -> &Value {
+    //     &self.stack[self.stack.len() - 1 - distance]
+    // }
+
     pub fn interpret(&mut self, buf: &str) -> Res<()> {
         let parser = Parser::new(buf, self.chunk.borrow_mut());
         parser.compile();
 
-        self.run()?;
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.run()));
+
+        match result {
+            Ok(_) => (),
+            Err(e) => {
+                self.runtime_error(
+                    e.downcast_ref::<String>()
+                        .unwrap_or(&"typed error occured.. Resetting stack.. Fallback".to_string())
+                        .to_owned(),
+                );
+            }
+        }
         Ok(())
     }
 
@@ -102,6 +116,21 @@ impl<'src> Vm<'src> {
                 Opcode::Constant(constant) => {
                     let value = self.chunk.read_constant(constant);
                     self.push(value);
+                }
+                Opcode::Nil => self.push(Value::Nil),
+                Opcode::True => self.push(Value::Bool(true)),
+                Opcode::False => self.push(Value::Bool(false)),
+                Opcode::Equal => {
+                    let (r, l) = (self.pop(), self.pop());
+                    self.push(Value::Bool(l == r))
+                }
+                Opcode::Greater => {
+                    let (r, l) = (self.pop(), self.pop());
+                    self.push(Value::Bool(l > r))
+                }
+                Opcode::Less => {
+                    let (r, l) = (self.pop(), self.pop());
+                    self.push(Value::Bool(l < r))
                 }
                 Opcode::Add => {
                     let (r, l) = (self.pop(), self.pop());
@@ -123,11 +152,32 @@ impl<'src> Vm<'src> {
                     let value = self.pop();
                     self.push(-value);
                 }
+                Opcode::Not => {
+                    let value = self.pop();
+                    self.push(!value);
+                }
                 Opcode::Return => {
-                    println!("{}", self.pop());
+                    if !self.stack.is_empty() {
+                        println!("{}", self.pop());
+                    }
                     return Ok(());
                 }
             }
         }
+    }
+
+    // error
+    fn runtime_error(&mut self, s: String) {
+        println!("{s}");
+
+        let instruction = self
+            .ip
+            .checked_sub(self.chunk.code.len().checked_sub(1).unwrap_or_default())
+            .unwrap_or_default();
+        let line = self.chunk.lines[instruction];
+
+        println!("[line {}] in script", line);
+
+        self.stack.clear();
     }
 }

@@ -38,8 +38,29 @@ impl<'parse> ParseRule<'parse> {
                 precedence: Precedence::Factor,
                 ..Default::default()
             },
+            TokenType::Bang => ParseRule {
+                prefix: Some(unary),
+                ..Default::default()
+            },
+            TokenType::BangEqual | TokenType::EqualEqual => ParseRule {
+                infix: Some(binary),
+                precedence: Precedence::Equality,
+                ..Default::default()
+            },
+            TokenType::Greater
+            | TokenType::GreaterEqual
+            | TokenType::Less
+            | TokenType::LessEqual => ParseRule {
+                infix: Some(binary),
+                precedence: Precedence::Comparison,
+                ..Default::default()
+            },
             TokenType::Number(_) => ParseRule {
                 prefix: Some(number),
+                ..Default::default()
+            },
+            TokenType::Nil | TokenType::True | TokenType::False => ParseRule {
+                prefix: Some(literal),
                 ..Default::default()
             },
             _ => ParseRule {
@@ -61,6 +82,12 @@ fn binary(parser: &mut Parser<'_>) {
     parser.parse_precedence(rule.precedence.next());
 
     match op {
+        TokenType::BangEqual => parser.emit_bytes(Opcode::Equal, Opcode::Not),
+        TokenType::EqualEqual => parser.emit_byte(Opcode::Equal),
+        TokenType::Greater => parser.emit_byte(Opcode::Greater),
+        TokenType::GreaterEqual => parser.emit_bytes(Opcode::Less, Opcode::Not),
+        TokenType::Less => parser.emit_byte(Opcode::Less),
+        TokenType::LessEqual => parser.emit_bytes(Opcode::Greater, Opcode::Not),
         TokenType::Plus => parser.emit_byte(Opcode::Add),
         TokenType::Minus => parser.emit_byte(Opcode::Subtract),
         TokenType::Star => parser.emit_byte(Opcode::Multiply),
@@ -76,7 +103,7 @@ fn unary(parser: &mut Parser<'_>) {
 
     match operator {
         TokenType::Minus => parser.emit_byte(Opcode::Negate),
-        TokenType::Bang => todo!(),
+        TokenType::Bang => parser.emit_byte(Opcode::Not),
         _ => (),
     }
 }
@@ -87,6 +114,14 @@ fn number(parser: &mut Parser<'_>) {
         .object()
         .map_err(|x| parser.error(&x.to_string()))
         .unwrap();
-    let idx = parser.chunk.add_constant(value);
-    parser.emit_byte(Opcode::Constant(idx));
+    parser.emit_constant(value);
+}
+
+fn literal(parser: &mut Parser<'_>) {
+    match parser.previous.kind {
+        TokenType::Nil => parser.emit_byte(Opcode::Nil),
+        TokenType::True => parser.emit_byte(Opcode::True),
+        TokenType::False => parser.emit_byte(Opcode::False),
+        _ => (),
+    }
 }

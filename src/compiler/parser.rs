@@ -1,9 +1,6 @@
-use std::borrow::BorrowMut;
-
 use crate::{
     chunks::{Chunk, Opcode},
     value::Value,
-    Res,
 };
 
 use super::{Cursor, ParseRule, Precedence, Token, TokenType};
@@ -98,10 +95,6 @@ impl<'src> Parser<'src> {
         }
 
         self.error_at_current(msg)
-    }
-
-    pub(super) fn current_chunk(&mut self) -> &mut Chunk {
-        self.chunk.borrow_mut()
     }
 
     // emitters

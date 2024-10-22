@@ -10,6 +10,7 @@ pub enum Value {
     Float(f64),
     Int(i64),
     Bool(bool),
+    Nil,
 }
 
 impl Value {
@@ -18,6 +19,35 @@ impl Value {
             Self::Float(_) => "float64",
             Self::Int(_) => "int64",
             Self::Bool(_) => "bool",
+            Self::Nil => "nil",
+        }
+    }
+}
+
+impl PartialEq for Value {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Float(l), Self::Float(r)) => l == r,
+            (Self::Int(l), Self::Int(r)) => l == r,
+            (Self::Bool(l), Self::Bool(r)) => l == r,
+            (Self::Nil, Self::Nil) => true,
+            (Self::Int(l), Self::Float(r)) => &(*l as f64) == r,
+            (Self::Float(l), Self::Int(r)) => l == &(*r as f64),
+            _ => false,
+        }
+    }
+}
+
+impl PartialOrd for Value {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match (self, other) {
+            (Self::Int(l), Self::Int(r)) => l.partial_cmp(r),
+            (Self::Float(l), Self::Float(r)) => l.partial_cmp(r),
+            (Self::Bool(l), Self::Bool(r)) => l.partial_cmp(r),
+            (Self::Float(l), Self::Int(r)) => l.partial_cmp(&(*r as f64)),
+            (Self::Int(l), Self::Float(r)) => (*l as f64).partial_cmp(r),
+            (Self::Nil, Self::Nil) => Some(std::cmp::Ordering::Equal),
+            _ => None,
         }
     }
 }
@@ -113,6 +143,7 @@ impl Not for Value {
         match self {
             Self::Int(i) => Self::Int(-i),
             Self::Bool(b) => Self::Bool(!b),
+            Self::Nil => Self::Bool(false),
             _ => panic!("TypeError: Unable to use logical not on {}", self.get_ty()),
         }
     }
@@ -124,6 +155,7 @@ impl fmt::Display for Value {
             Self::Float(fl) => write!(f, "{fl}"),
             Self::Int(i) => write!(f, "{i}"),
             Self::Bool(b) => write!(f, "{b}"),
+            Self::Nil => write!(f, "nil"),
         }
     }
 }
@@ -174,16 +206,12 @@ impl From<bool> for Value {
     }
 }
 
-impl TryFrom<Value> for bool {
-    type Error = RxError;
-
-    fn try_from(value: Value) -> Result<Self, Self::Error> {
+impl From<Value> for bool {
+    fn from(value: Value) -> Self {
         match value {
-            Value::Bool(b) => Ok(b),
-            _ => Err(RxError::new(Compile::new(&format!(
-                "TypeError: Unable to convert {} to a bool",
-                value.get_ty()
-            )))),
+            Value::Bool(b) => b,
+            Value::Nil => false,
+            _ => true,
         }
     }
 }
