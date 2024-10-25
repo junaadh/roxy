@@ -1,6 +1,7 @@
 use crate::{
     chunks::{Chunk, Opcode},
-    compiler::Parser,
+    compiler::{Parser, TokenType},
+    object::ObjRef,
     value::Value,
     Res,
 };
@@ -133,8 +134,14 @@ impl<'src> Vm<'src> {
                     self.push(Value::Bool(l < r))
                 }
                 Opcode::Add => {
-                    let (r, l) = (self.pop(), self.pop());
-                    self.push(l + r);
+                    let val = match (self.pop(), self.pop()) {
+                        (Value::String(r), Value::String(l)) => {
+                            let str = format!("{}{}", l, r);
+                            Value::String(ObjRef::new(Box::into_raw(Box::new(str))))
+                        }
+                        (r, l) => l + r,
+                    };
+                    self.push(val);
                 }
                 Opcode::Subtract => {
                     let (r, l) = (self.pop(), self.pop());

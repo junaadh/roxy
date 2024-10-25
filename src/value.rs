@@ -3,7 +3,10 @@ use std::{
     ops::{Add, Div, Mul, Neg, Not, Sub},
 };
 
-use crate::error::{Compile, RxError};
+use crate::{
+    error::{Compile, RxError},
+    object::ObjRef,
+};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Value {
@@ -11,6 +14,7 @@ pub enum Value {
     Int(i64),
     Bool(bool),
     Nil,
+    String(ObjRef<String>),
 }
 
 impl Value {
@@ -20,6 +24,7 @@ impl Value {
             Self::Int(_) => "int64",
             Self::Bool(_) => "bool",
             Self::Nil => "nil",
+            Self::String(_) => "string",
         }
     }
 }
@@ -33,6 +38,7 @@ impl PartialEq for Value {
             (Self::Nil, Self::Nil) => true,
             (Self::Int(l), Self::Float(r)) => &(*l as f64) == r,
             (Self::Float(l), Self::Int(r)) => l == &(*r as f64),
+            (Self::String(s1), Self::String(s2)) => unsafe { *s1.value == *s2.value },
             _ => false,
         }
     }
@@ -47,6 +53,7 @@ impl PartialOrd for Value {
             (Self::Float(l), Self::Int(r)) => l.partial_cmp(&(*r as f64)),
             (Self::Int(l), Self::Float(r)) => (*l as f64).partial_cmp(r),
             (Self::Nil, Self::Nil) => Some(std::cmp::Ordering::Equal),
+            // (Self::String(s1), Self::String(s2)) => s1.partial_cmp(s2),
             _ => None,
         }
     }
@@ -56,11 +63,11 @@ impl Add for Value {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
-        match (self, rhs) {
+        match (&self, &rhs) {
             (Self::Float(l), Self::Float(r)) => Self::Float(l + r),
             (Self::Int(l), Self::Int(r)) => Self::Int(l + r),
-            (Self::Float(l), Self::Int(r)) => Self::Float(l + r as f64),
-            (Self::Int(l), Self::Float(r)) => Self::Float(l as f64 + r),
+            (Self::Float(l), Self::Int(r)) => Self::Float(l + *r as f64),
+            (Self::Int(l), Self::Float(r)) => Self::Float(*l as f64 + r),
             _ => panic!(
                 "TypeError: Unable to add lhs: {} with rhs: {}",
                 self.get_ty(),
@@ -74,11 +81,11 @@ impl Sub for Value {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        match (self, rhs) {
+        match (&self, &rhs) {
             (Self::Float(l), Self::Float(r)) => Self::Float(l - r),
             (Self::Int(l), Self::Int(r)) => Self::Int(l - r),
-            (Self::Float(l), Self::Int(r)) => Self::Float(l - r as f64),
-            (Self::Int(l), Self::Float(r)) => Self::Float(l as f64 - r),
+            (Self::Float(l), Self::Int(r)) => Self::Float(l - *r as f64),
+            (Self::Int(l), Self::Float(r)) => Self::Float(*l as f64 - r),
             _ => panic!(
                 "TypeError: Unable to subtract lhs: {} with rhs: {}",
                 self.get_ty(),
@@ -92,11 +99,11 @@ impl Mul for Value {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        match (self, rhs) {
+        match (&self, &rhs) {
             (Self::Float(l), Self::Float(r)) => Self::Float(l * r),
             (Self::Int(l), Self::Int(r)) => Self::Int(l * r),
-            (Self::Float(l), Self::Int(r)) => Self::Float(l * r as f64),
-            (Self::Int(l), Self::Float(r)) => Self::Float(l as f64 * r),
+            (Self::Float(l), Self::Int(r)) => Self::Float(l * *r as f64),
+            (Self::Int(l), Self::Float(r)) => Self::Float(*l as f64 * r),
             _ => panic!(
                 "TypeError: Unable to multiply lhs: {} with rhs: {}",
                 self.get_ty(),
@@ -110,11 +117,11 @@ impl Div for Value {
     type Output = Self;
 
     fn div(self, rhs: Self) -> Self::Output {
-        match (self, rhs) {
+        match (&self, &rhs) {
             (Self::Float(l), Self::Float(r)) => Self::Float(l / r),
             (Self::Int(l), Self::Int(r)) => Self::Int(l / r),
-            (Self::Float(l), Self::Int(r)) => Self::Float(l / r as f64),
-            (Self::Int(l), Self::Float(r)) => Self::Float(l as f64 / r),
+            (Self::Float(l), Self::Int(r)) => Self::Float(l / *r as f64),
+            (Self::Int(l), Self::Float(r)) => Self::Float(*l as f64 / r),
             _ => panic!(
                 "TypeError: Unable to divide lhs: {} with rhs: {}",
                 self.get_ty(),
@@ -150,12 +157,13 @@ impl Not for Value {
 }
 
 impl fmt::Display for Value {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Float(fl) => write!(f, "{fl}"),
             Self::Int(i) => write!(f, "{i}"),
             Self::Bool(b) => write!(f, "{b}"),
             Self::Nil => write!(f, "nil"),
+            Self::String(v) => write!(f, "{}", v),
         }
     }
 }

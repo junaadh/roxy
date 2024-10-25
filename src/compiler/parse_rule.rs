@@ -1,4 +1,4 @@
-use crate::chunks::Opcode;
+use crate::{chunks::Opcode, object::ObjRef, value::Value};
 
 use super::{Parser, Precedence, TokenType};
 
@@ -53,6 +53,10 @@ impl<'parse> ParseRule<'parse> {
             | TokenType::LessEqual => ParseRule {
                 infix: Some(binary),
                 precedence: Precedence::Comparison,
+                ..Default::default()
+            },
+            TokenType::String(_) => ParseRule {
+                prefix: Some(string),
                 ..Default::default()
             },
             TokenType::Number(_) => ParseRule {
@@ -123,5 +127,13 @@ fn literal(parser: &mut Parser<'_>) {
         TokenType::True => parser.emit_byte(Opcode::True),
         TokenType::False => parser.emit_byte(Opcode::False),
         _ => (),
+    }
+}
+
+fn string(parser: &mut Parser<'_>) {
+    let string = parser.previous;
+    if let TokenType::String(v) = string.kind {
+        let s = Value::String(ObjRef::new(Box::into_raw(Box::new(v.to_string()))));
+        parser.emit_constant(s);
     }
 }
